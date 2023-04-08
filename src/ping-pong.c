@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "discord.h"
+#include "log.h"
 
 void print_usage(void) {
     printf("\nThe classic ping pong example\n"
@@ -9,25 +10,25 @@ void print_usage(void) {
             "2. Type pong in chat for ping\n");
 }
 
-void on_ready(struct discord *client) {
-    const struct discord_user *bot = discord_get_self(client);
+void on_ready(struct discord *client, const struct discord_ready *event) {
+    // const struct discord_user *bot = discord_get_self(client);
 
     log_info("bot successfully connected to Discord as %s#%s", 
-                            bot->username, bot->discriminator);
+                            event->user->username, event->user->discriminator);
 }
 
-void on_ping(struct discord *client, const struct discord_message *msg) {
-    if (msg->author->bot) return;
+void on_ping(struct discord *client, const struct discord_message *event) {
+    if (event->author->bot) return;
 
-    struct create_discord_message param = { .content = "pong" };
-    discord_create_message(client, msg->channel_id, NULL);
+    struct discord_create_message param = { .content = "pong" };
+    discord_create_message(client, event->channel_id, &param, NULL);
 }
 
-void on_pong(struct discord *client, const struct discord_message *msg) {
-    if (msg->author->bot) return;
+void on_pong(struct discord *client, const struct discord_message *event) {
+    if (event->author->bot) return;
 
-    struct create_discord_message param = { .content = "ping" };
-    discord_create_message(client, msg->channel_id, NULL);
+    struct discord_create_message param = { .content = "ping" };
+    discord_create_message(client, event->channel_id, &param, NULL);
 }
 
 int main(int argc, char *argv[]) {
@@ -41,13 +42,14 @@ int main(int argc, char *argv[]) {
     struct discord *client = discord_config_init(config_file);
 
     discord_set_on_ready(client, &on_ready);
-    discord_set_on_commands("pong", &on_pong);
-    discord_set_on_commands("ping", &on_ping);
+    discord_set_on_command(client, "pong", &on_pong);
+    discord_set_on_command(client, "ping", &on_ping);
 
-    print_usage()
+    print_usage();
+    fgetc(stdin);
 
-    discord_run(client)
+    discord_run(client);
 
-    discord_cleanup(client)
-    ccord_global_cleanup()
+    discord_cleanup(client);
+    ccord_global_cleanup();
 }
